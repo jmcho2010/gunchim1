@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        @charset "utf-8";
+:root{
+    --bg:#001E31;
+    --ball:#4DB9FF;
+    --cursor:#36ffc6;
+    --cursor-shadow:
+    0 0 10px var(--cursor),
+    0 0 30px var(--cursor),
+    0 0 100px var(--cursor);
+    --shadow:0 0 1rem #031b2a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;}
+body{
+    overflow:hidden;
+    display:flex;flex-flow:column nowrap;
+    justify-content:center; align-items:center;
+    min-height:100vh;
+    background:var(--bg);
+}
+svg{display:none;}
+
+/*  */
+#wrap{
+    position:relative;
+    width:90vmin; aspect-ratio:1/1;
+}
+#balls{
+    display:flex;flex-flow:row wrap;
+    justify-content:center;align-items:center;
+    align-content:center;
+    gap:5vmin;
+    position:relative;
+    width:100%; height:100%;
+    filter:url(#goo);
+}
+ 
+/*  */
+.ball{
+    position:relative;
+    width:10vmin; aspect-ratio:1/1;
+    background:var(--ball);
+    border-radius:50%;
+    transition:transform .3s .3s linear;
+}
+.ball:hover{
+    transform:scale(1.15);
+    transition:transform .3s 0s linear;
+}
+ 
+/*  */
+.cursor{
+    --wid:10vmin;
+    --center : calc(var(--wid) / 2 * -1);
+    position:absolute;
+    top:0;left:0;
+    width:var(--wid);aspect-ratio:1/1;
+    background:var(--cursor);
+    border-radius:50%;
+    pointer-events:none;
+}
+.cursor.back{
+    box-shadow:var(--cursor-shadow);
+}
+
+
+
+    </style>
+</head>
+<body>
+     <!-- wrap -->
+     <div id="wrap">
+        <!-- cursor -->
+        <div class="cursor back"></div>
+        <div id="balls"></div>
+    </div><!-- wrap -->
+
+    <!-- SVG GOOEY FILTER -->
+    <svg>
+        <filter id="goo">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+        </filter>
+    </svg>
+    <script>
+        function make_balls(num){
+            const balls = document.getElementById('balls');
+            const frag = document.createDocumentFragment();
+            for(let i=0;i<num;i++){
+                const ball = document.createElement('div');
+                ball.classList.add('ball');
+                frag.appendChild(ball);
+            }
+            const cursor = document.createElement('div');
+            cursor.classList.add('cursor');
+            cursor.style.position = 'fixed';
+            cursor.style.top = '0';
+            cursor.style.left = '0';
+            frag.appendChild(cursor);
+            balls.appendChild(frag);
+            
+        }
+        
+        
+        make_balls(30);
+        const cursor = document.querySelectorAll('.cursor');
+            cursor[0].style.display = 'none';
+            cursor[1].style.display = 'none';
+        document.addEventListener('mousemove', (event)=>{
+            const cursor = document.querySelectorAll('.cursor');
+            const balls = document.getElementById('balls');
+            const balls2 = document.querySelectorAll('ball');
+            cursor[0].style.display = 'block';
+            cursor[1].style.display = 'block';
+            const {clientX, clientY} = event;
+            const {left, top} = balls.getBoundingClientRect();
+            const half = cursor[0].offsetWidth / 2;
+            const pos = `translate(${clientX - left -half}px, ${clientY - top -half}px)`;
+            cursor[0].style.transform = pos;
+            cursor[1].style.transform = pos;
+            play_sound(clientX, clientY,balls2);
+           
+                // 오실레이터 시작
+            //  oscillator.start().then(() => {
+            //     setTimeout(() => {
+            //         gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 0.04);
+            
+            //         oscillator.stop();
+            //     },1000);
+            //  })
+            
+            // else {
+            //     // 오실레이터 정지
+            //     oscillator.stop();
+            // }
+        
+        
+        });
+        document.addEventListener('mouseout', (event)=>{
+            const cursor = document.querySelectorAll('.cursor');
+            cursor[0].style.display = 'none';
+            cursor[1].style.display = 'none';
+        });
+        function play_sound(clientX, clientY,balls){
+            balls.forEach(function(ball){ 
+                const {left, top} = ball.getBoundingClientRect();
+                const half = ball.offsetWidth / 2;
+                const ballX =left + half;
+                const ballY = top + half;
+                const Xlength =Math.abs(clientX-ballX);
+                const Ylength =Math.abs(clientY-ballY);
+                if(Math.pow(Xlength,2) + Math.pow(Ylength,2) === Math.pow(ball.offsetWidth,2)){
+                    //oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                    oscillator.start();
+                    console.log("start")
+                    gainNode.gain.exponentialRampToValueAtTime(1, audioContext.currentTime + 0.04);
+                    gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 0.04);
+                    oscillator.stop();
+                }
+        
+                
+            })
+        }
+        
+        
+        
+        // 오디오 컨텍스트 생성
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 오실레이터와 게인 노드 생성
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // 오실레이터와 게인 노드 연결
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // 오실레이터 소리 설정
+        oscillator.type = 'sine'; // 사인파로 설정
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 주파수 설정
+        
+    </script>
+</body>
+</html>
